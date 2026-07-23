@@ -422,4 +422,24 @@
 
         function atualizarKPIs() {
             let produtosEmProcesso = produtos.length;
+            maquinas.forEach(m => { 
+            if (m.produtoAtual) produtosEmProcesso++; });
+            document.getElementById("kpiWip").innerText = produtosEmProcesso;
+            document.getElementById("kpiConcluidos").innerText = produtosConcluidos;
+            document.getElementById("kpiFalhas").innerText = totalFalhas;let machinesQuebradas = maquinas.filter(m => m.quebrada).length;
+            let oee = Math.round(((maquinas.length - machinesQuebradas) / maquinas.length) * 100);
+            document.getElementById("kpiEficiencia").innerText = oee + "%";historicoWIP.push(produtosEmProcesso);
+            historicoWIP.shift();
+        }
+        function loopPrincipal() {
+            logicaFabrica();
+            desenharSimulador();
+            requestAnimationFrame(loopPrincipal);
+        }
+        setInterval(function() {
+            atualizarKPIs();
+            desenharGrafico();
+        }, 500);
+        atualizarParametros();
+        loopPrincipal();
 
