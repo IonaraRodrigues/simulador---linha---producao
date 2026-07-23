@@ -193,44 +193,233 @@
         </div>
     </div>
 
-<script>
-const canvas = document.getElementById("canvasSimulador");
-const ctx = canvas.getContext("2d");
-const canvasGrafico = document.getElementById("canvasGrafico");
-const ctxG = canvasGrafico.getContext("2d");
+    <!-- ⚙️ LÓGICA DO MOTOR DA FÁBRICA VIRTUAL COMPLETA -->
+    <script>
+        const canvasSim = document.getElementById("canvasSimulador");
+        const ctxSim = canvasSim.getContext("2d");
+        const canvasGrafico = document.getElementById("canvasGrafico");
+        const ctxGrafico = canvasGrafico.getContext("2d");
 
-const kpiWip = document.getElementById("kpiWip");
-const kpiConcluidos = document.getElementById("kpiConcluidos");
-const kpiEficiencia = document.getElementById("kpiEficiencia");
-const kpiFalhas = document.getElementById("kpiFalhas");
-const txtVel = document.getElementById("txtVel");
-const sliderVelocidade = document.getElementById("sliderVelocidade");
-const btnAuto = document.getElementById("btnAuto");
+        // Configurações do Sistema
+        let velocidade = 2;
+        let autoFeed = false;
+        let autoFeedTimer = null;
 
-const esteiraY = 95;
-const esteiraAltura = 20;
-let velocidadeEsteira = 2;
+        // Histórico para o Gráfico de Desempenho
+        let historicoWIP = new Array(60).fill(0);
 
-let totalProduzido = 0;
-let contadorFalhas = 0;
-let tempoOciosoTotal = 0;
-let framesTotais = 0;
-let historicoProducao = [];
-let intervaloGrafico = 0;
-let autoFeedAtivo = false;
-let cronometroAutoFeed = 0;
+        // KPIs da Fábrica
+        let produtosConcluidos = 0;
+        let totalFalhas = 0;
 
-const maquinas = [
-    { id: 0, nome: "Prensa",  x: 220, y: 45, larg: 70, alt: 80, tempoMax: 90,  cronometro: 0, ativo: null, quebrada: false, chanceFalha: 0.0003 },
-    { id: 1, nome: "Pintura", x: 470, y: 45, larg: 70, alt: 80, tempoMax: 120, cronometro: 0, ativo: null, quebrada: false, chanceFalha: 0.0002 },
-    { id: 2, nome: "Triagem", x: 720, y: 45, larg: 70, alt: 80, tempoMax: 60,  cronometro: 0, ativo: null, quebrada: false, chanceFalha: 0.0004 }
-];
+        // Estrutura das Máquinas (Prensa, Pintura, Triagem)
+        let maquinas = [
+            { id: 0, nome: "Prensa", x: 250, y: 90, tempoCiclo: 90, tempoRestante: 0, quebrada: false, produtoAtual: null, cor: "#ff7675" },
+            { id: 1, nome: "Pintura", x: 500, y: 90, tempoCiclo: 120, tempoRestante: 0, quebrada: false, produtoAtual: null, cor: "#ffeaa7" },
+            { id: 2, nome: "Triagem", x: 750, y: 90, tempoCiclo: 60, tempoRestante: 0, quebrada: false, produtoAtual: null, cor: "#55efc4" }
+        ];
 
-let produtos = [];
+        // Lista de produtos na esteira (WIP)
+        let produtos = [];
 
-function atualizarParametros() {
-    velocidadeEsteira = parseInt(sliderVelocidade.value);
-    txtVel.innerText = velocidadeEsteira;
-    
-    // CORREÇÃO DOS ÍNDICES DAS MÁQUINAS (Resolvido o bug que travava o código):
-    if (document.getElementById("tempo_0") && document.getElementById("tempo_1") && document.getElementById("tempo_2")) {
+        function atualizarParametros() {
+            velocidade = parseInt(document.getElementById("sliderVelocidade").value);
+            document.getElementById("txtVel").innerText = velocidade;
+
+            // Transforma os segundos inseridos pelo usuário em frames de animação (~60fps)
+            maquinas[0].tempoCiclo = Math.max(30, parseFloat(document.getElementById("tempo_0").value) * 60);
+            maquinas[1].tempoCiclo = Math.max(30, parseFloat(document.getElementById("tempo_1").value) * 60);
+            maquinas[2].tempoCiclo = Math.max(30, parseFloat(document.getElementById("tempo_2").value) * 60);
+        }
+
+        function adicionarProduto() {
+            // Só adiciona se o início da esteira não estiver engargalado
+            if (produtos.length === 0 || produtos[0].x > 40) {
+                produtos.unshift({
+                    x: 10,
+                    y: 90,
+                    estagio: 0, // 0 = Movendo, 1 = Processando
+                    maquinaAlvo: 0,
+                    cor: "#4dabf7" // Matéria-prima azul
+                });
+            }
+        }
+
+        function alternarAuto() {
+            autoFeed = !autoFeed;
+            const btn = document.getElementById("btnAuto");
+            if (autoFeed) {
+                btn.innerText = "Auto Feed: LIG";
+                btn.classList.add("ativo");
+                autoFeedTimer = setInterval(adicionarProduto, 2500); // Injeta um produto a cada 2.5s
+            } else {
+                btn.innerText = "Auto Feed: DESL";
+                btn.classList.remove("ativo");
+                clearInterval(autoFeedTimer);
+            }
+        }
+
+        function consertarMaquina(id) {
+            maquinas[id].quebrada = false;
+            document.getElementById(`btnMan_${id}`).style.display = "none";
+            const status = document.getElementById(`statusMan_${id}`);
+            status.innerText = "OK";
+            status.style.color = "#2b8a3e";
+        }
+
+        function simularFalhaAleatoria(id) {
+            // Chance matemática pequena por frame para simular quebra estocástica por estresse
+            if (Math.random() < 0.0015 && !maquinas[id].quebrada && maquinas[id].produtoAtual) {
+                maquinas[id].quebrada = true;
+                totalFalhas++;
+                document.getElementById(`btnMan_${id}`).style.display = "inline-block";
+                const status = document.getElementById(`statusMan_${id}`);
+                status.innerText = "FALHA";
+                status.style.color = "#e63946";
+            }
+        }
+
+        function logicaFabrica() {
+            // 1. Processamento das Máquinas
+            maquinas.forEach(m => {
+                if (m.quebrada) return; // Máquina travada por manutenção
+
+                if (m.produtoAtual) {
+                    simularFalhaAleatoria(m.id);
+                    if (m.quebrada) return; // Se quebrou agora, interrompe
+
+                    m.tempoRestante--;
+                    if (m.tempoRestante <= 0) {
+                        // Finalizou o ciclo! Libera o produto de volta para a esteira
+                        let p = m.produtoAtual;
+                        p.estagio = 0; 
+                        p.x = m.x + 25; // Coloca logo após a saída da máquina
+                        p.maquinaAlvo++;
+                        
+                        // Mudança visual de estado do produto
+                        if (m.id === 0) p.cor = "#a29bfe"; // Estampado (Roxo)
+                        if (m.id === 1) p.cor = "#00cec9"; // Pintado (Ciano)
+
+                        produtos.push(p);
+                        m.produtoAtual = null;
+                    }
+                }
+            });
+
+            // 2. Movimentação dos Produtos na Esteira
+            for (let i = produtos.length - 1; i >= 0; i--) {
+                let p = produtos[i];
+
+                if (p.estagio === 0) {
+                    let alvo = maquinas[p.maquinaAlvo];
+
+                    if (alvo) {
+                        // Se aproximando de uma máquina
+                        if (p.x < alvo.x - 20) {
+                            // Verifica se há outro produto parado logo à frente para evitar sobreposição (Fila)
+                            let barreira = false;
+                            for (let j = 0; j < produtos.length; j++) {
+                                if (produtos[j] !== p && produtos[j].x > p.x && produtos[j].x - p.x < 25) {
+                                    barreira = true;
+                                }
+                            }
+                            if (!barreira) p.x += velocidade;
+                        } else {
+                            // Chegou na máquina! Verifica se ela está vazia e funcionando
+                            if (!alvo.produtoAtual && !alvo.quebrada) {
+                                alvo.produtoAtual = p;
+                                alvo.tempoRestante = alvo.tempoCiclo;
+                                p.estagio = 1;
+                                produtos.splice(i, 1); // Remove da esteira ativa temporariamente
+                            }
+                        }
+                    } else {
+                        // Passou da última máquina (Triagem), vai para a expedição
+                        if (p.x < canvasSim.width - 30) {
+                            p.x += velocidade;
+                        } else {
+                            produtosConcluidos++;
+                            produtos.splice(i, 1); // Produto finalizado com sucesso
+                        }
+                    }
+                }
+            }
+        }
+
+        function desenharSimulador() {
+            ctxSim.clearRect(0, 0, canvasSim.width, canvasSim.height);
+
+            // Desenha a linha física da esteira rolante
+            ctxSim.fillStyle = "#3b3b4f";
+            ctxSim.fillRect(10, 85, canvasSim.width - 20, 15);
+
+            // Desenha as Torres das Máquinas
+            maquinas.forEach(m => {
+                ctxSim.fillStyle = m.quebrada ? "#e63946" : (m.produtoAtual ? "#f5a623" : "#2b8a3e");
+                ctxSim.fillRect(m.x - 30, m.y - 45, 60, 40);
+                
+                // Texto do nome da máquina
+                ctxSim.fillStyle = "#fff";
+                ctxSim.font = "bold 11px sans-serif";
+                ctxSim.fillText(m.nome, m.x - 20, m.y - 25);
+
+                // Barra de progresso do processamento
+                if (m.produtoAtual && !m.quebrada) {
+                    let pct = (m.tempoCiclo - m.tempoRestante) / m.tempoCiclo;
+                    ctxSim.fillStyle = "#4dabf7";
+                    ctxSim.fillRect(m.x - 25, m.y - 12, 50 * pct, 4);
+                }
+            });
+
+            // Desenha os Produtos na esteira
+            produtos.forEach(p => {
+                ctxSim.fillStyle = p.cor;
+                ctxSim.fillRect(p.x - 10, p.y - 10, 20, 20);
+                ctxSim.strokeStyle = "#fff";
+                ctxSim.strokeRect(p.x - 10, p.y - 10, 20, 20);
+            });
+
+            // Desenha os Produtos atualmente dentro das máquinas
+            maquinas.forEach(m => {
+                if (m.produtoAtual) {
+                    ctxSim.fillStyle = m.produtoAtual.cor;
+                    ctxSim.fillRect(m.x - 10, m.y - 5, 20, 20);
+                }
+            });
+        }
+
+        function desenharGrafico() {
+            ctxGrafico.clearRect(0, 0, canvasGrafico.width, canvasGrafico.height);
+            
+            ctxGrafico.strokeStyle = "#2b2b36";
+            ctxGrafico.lineWidth = 1;
+            for(let i=1; i<5; i++) {
+                let y = canvasGrafico.height - (i * 30);
+                ctxGrafico.beginPath();
+                ctxGrafico.moveTo(0, y);
+                ctxGrafico.lineTo(canvasGrafico.width, y);
+                ctxGrafico.stroke();
+            }
+
+            // Desenha a linha histórica do WIP
+            ctxGrafico.strokeStyle = "#4dabf7";
+            ctxGrafico.lineWidth = 3;
+            ctxGrafico.beginPath();
+            
+            let espacamento = canvasGrafico.width / (historicoWIP.length - 1);
+            for (let i = 0; i < historicoWIP.length; i++) {
+                let x = i * espacamento;
+                let y = canvasGrafico.height - (historicoWIP[i] * 12) - 10;
+                if (i === 0) ctxGrafico.moveTo(x, y);
+                else ctxGrafico.lineTo(x, y);
+            }
+            ctxGrafico.stroke();
+
+            ctxGrafico.fillStyle = "#a0a0b0";
+            ctxGrafico.font = "10px sans-serif";
+            ctxGrafico.fillText("Histórico de Carga de Trabalho (WIP ao longo do tempo)", 15, 20);
+        }
+
+        function atualizarKPIs() {
+            let produtosEmProcesso = produtos.length;
+
