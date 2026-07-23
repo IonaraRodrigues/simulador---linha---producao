@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Simulador Avançado de Linha de Produção 4.0</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #141419;
+            color: #f5f5f7;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 10px;
+            margin: 0;
+            box-sizing: border-box;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+        h1 { margin-bottom: 5px; color: #4dabf7; font-size: 22px; text-align: center; }
+        .sub { color: #a0a0b0; margin-top: 0; margin-bottom: 15px; font-size: 12px; text-align: center; }
+        
+        .grid-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            width: 100%;
+            max-width: 1200px;
+        }
+
+        .painel-lateral {
+            background: #1e1e24;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            display: flex;
+            flex-direction: row;
+            flex-wrap: wrap;
+            gap: 15px;
+            justify-content: space-between;
+        }
+        .painel-lateral > div { flex: 1; min-width: 140px; }
+        .painel-lateral h2 { font-size: 13px; margin: 0 0 8px 0; border-bottom: 1px solid #3b3b4f; padding-bottom: 3px; color: #22b8cf; text-transform: uppercase; }
+        
+        .painel-principal { display: flex; flex-direction: column; gap: 15px; width: 100%; }
+
+        .dashboard { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+        .kpi-card {
+            background: #1e1e24;
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+            border-bottom: 4px solid #4dabf7;
+        }
+        .kpi-card h3 { margin: 0 0 5px 0; font-size: 11px; text-transform: uppercase; color: #a0a0b0; }
+        .kpi-card p { margin: 0; font-size: 20px; font-weight: bold; }
+
+        .canvas-container { width: 100%; overflow: hidden; position: relative; }
+        canvas {
+            background: #1e1e24;
+            border: 2px solid #2b2b36;
+            border-radius: 8px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .controle-grupo { display: flex; flex-direction: column; gap: 5px; margin-bottom: 8px; }
+        .controle-row { display: flex; align-items: center; justify-content: space-between; gap: 5px; }
+        label { font-size: 10px; text-transform: uppercase; color: #a0a0b0; font-weight: 600; }
+        
+        input[type="number"] {
+            background: #2b2b36;
+            border: 1px solid #3b3b4f;
+            color: #fff;
+            padding: 6px;
+            border-radius: 4px;
+            width: 55px;
+            text-align: center;
+            font-size: 14px;
+        }
+        input[type="range"] { width: 100%; height: 15px; cursor: pointer; }
+        
+        button {
+            padding: 12px;
+            font-size: 13px;
+            font-weight: bold;
+            cursor: pointer;
+            background: #22b8cf;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            width: 100%;
+            margin-bottom: 5px;
+            touch-action: manipulation;
+        }
+        button:hover { background: #11999e; }
+        .btn-auto { background: #2b8a3e; }
+        .btn-auto.ativo { background: #e63946; }
+        
+        .btn-manutencao {
+            padding: 6px 10px;
+            font-size: 11px;
+            background: #ff922b;
+            width: auto;
+            border-radius: 4px;
+            margin: 0;
+        }
+
+        @media (min-width: 768px) {
+            body { padding: 20px; }
+            h1 { font-size: 28px; }
+            .grid-container { display: grid; grid-template-columns: 280px 1fr; }
+            .painel-lateral { flex-direction: column; }
+            .dashboard { grid-template-columns: repeat(4, 1fr); }
+            .kpi-card p { font-size: 24px; }
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Simulador de Linha de Produção Industrial 4.0</h1>
+    <div class="sub">Sistema Universal Adaptável com Alimentador Automático</div>
+
+    <div class="grid-container">
+        
+        <!-- CONTROLES DA FÁBRICA -->
+        <div class="painel-lateral">
+            <div>
+                <h2>Alimentação</h2>
+                <button onclick="adicionarProduto()">Injetar Manual</button>
+                <button id="btnAuto" class="btn-auto" onclick="alternarAuto()">Auto Feed: DESL</button>
+            </div>
+
+            <div>
+                <h2>Logística</h2>
+                <div class="controle-grupo">
+                    <label>Velocidade (<span id="txtVel">2</span> px/f)</label>
+                    <input type="range" id="sliderVelocidade" min="1" max="5" value="2" oninput="atualizarParametros()">
+                </div>
+            </div>
+
+            <div>
+                <h2>Ciclos (segundos)</h2>
+                <div class="controle-grupo controle-row">
+                    <label>1. Prensa:</label>
+                    <input type="number" id="tempo_0" value="1.5" step="0.1" min="0.5" onchange="atualizarParametros()">
+                </div>
+                <div class="controle-grupo controle-row">
+                    <label>2. Pintura:</label>
+                    <input type="number" id="tempo_1" value="2.0" step="0.1" min="0.5" onchange="atualizarParametros()">
+                </div>
+                <div class="controle-grupo controle-row">
+                    <label>3. Triagem:</label>
+                    <input type="number" id="tempo_2" value="1.0" step="0.1" min="0.5" onchange="atualizarParametros()">
+                </div>
+            </div>
+
+            <div>
+                <h2>Manutenção</h2>
+                <div class="controle-grupo" style="gap: 8px;">
+                    <div class="controle-row">
+                        <label>Prensa:</label>
+                        <button class="btn-manutencao" id="btnMan_0" onclick="consertarMaquina(0)" style="display:none;">Consertar</button>
+                        <span id="statusMan_0" style="color:#2b8a3e; font-size:11px; font-weight:bold;">OK</span>
+                    </div>
+                    <div class="controle-row">
+                        <label>Pintura:</label>
+                        <button class="btn-manutencao" id="btnMan_1" onclick="consertarMaquina(1)" style="display:none;">Consertar</button>
+                        <span id="statusMan_1" style="color:#2b8a3e; font-size:11px; font-weight:bold;">OK</span>
+                    </div>
+                    <div class="controle-row">
+                        <label>Triagem:</label>
+                        <button class="btn-manutencao" id="btnMan_2" onclick="consertarMaquina(2)" style="display:none;">Consertar</button>
+                        <span id="statusMan_2" style="color:#2b8a3e; font-size:11px; font-weight:bold;">OK</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- EXIBIÇÃO DA LINHA E GRÁFICO -->
+        <div class="painel-principal">
+            <div class="dashboard">
+                <div class="kpi-card" style="border-bottom-color: #74c0fc;"><h3>Processo (WIP)</h3><p id="kpiWip">0</p></div>
+                <div class="kpi-card" style="border-bottom-color: #2b8a3e;"><h3>Produzido</h3><p id="kpiConcluidos">0</p></div>
+                <div class="kpi-card" style="border-bottom-color: #f5a623;"><h3>OEE (Disp.)</h3><p id="kpiEficiencia">100%</p></div>
+                <div class="kpi-card" style="border-bottom-color: #e63946;"><h3>Falhas</h3><p id="kpiFalhas">0</p></div>
+            </div>
+            <div class="canvas-container"><canvas id="canvasSimulador" width="900" height="180"></canvas></div>
+            <div class="canvas-container"><canvas id="canvasGrafico" width="900" height="150"></canvas></div>
+        </div>
+    </div>
+
+<script>
+const canvas = document.getElementById("canvasSimulador");
+const ctx = canvas.getContext("2d");
+const canvasGrafico = document.getElementById("canvasGrafico");
+const ctxG = canvasGrafico.getContext("2d");
+
+const kpiWip = document.getElementById("kpiWip");
+const kpiConcluidos = document.getElementById("kpiConcluidos");
+const kpiEficiencia = document.getElementById("kpiEficiencia");
+const kpiFalhas = document.getElementById("kpiFalhas");
+const txtVel = document.getElementById("txtVel");
+const sliderVelocidade = document.getElementById("sliderVelocidade");
+const btnAuto = document.getElementById("btnAuto");
+
+const esteiraY = 95;
+const esteiraAltura = 20;
+let velocidadeEsteira = 2;
+
+let totalProduzido = 0;
+let contadorFalhas = 0;
+let tempoOciosoTotal = 0;
+let framesTotais = 0;
+let historicoProducao = [];
+let intervaloGrafico = 0;
+let autoFeedAtivo = false;
+let cronometroAutoFeed = 0;
+
+const maquinas = [
+    { id: 0, nome: "Prensa",  x: 220, y: 45, larg: 70, alt: 80, tempoMax: 90,  cronometro: 0, ativo: null, quebrada: false, chanceFalha: 0.0003 },
+    { id: 1, nome: "Pintura", x: 470, y: 45, larg: 70, alt: 80, tempoMax: 120, cronometro: 0, ativo: null, quebrada: false, chanceFalha: 0.0002 },
+    { id: 2, nome: "Triagem", x: 720, y: 45, larg: 70, alt: 80, tempoMax: 60,  cronometro: 0, ativo: null, quebrada: false, chanceFalha: 0.0004 }
+];
+
+let produtos = [];
+
+function atualizarParametros() {
+    velocidadeEsteira = parseInt(sliderVelocidade.value);
+    txtVel.innerText = velocidadeEsteira;
+    
+    // CORREÇÃO DOS ÍNDICES DAS MÁQUINAS (Resolvido o bug que travava o código):
+    if (document.getElementById("tempo_0") && document.getElementById("tempo_1") && document.getElementById("tempo_2")) {
