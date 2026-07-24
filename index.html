@@ -132,6 +132,7 @@
                 <h2>Alimentação</h2>
                 <button onclick="adicionarProduto()">Injetar Manual</button>
                 <button id="btnAuto" class="btn-auto" onclick="alternarAuto()">Auto Feed: DESL</button>
+                <button onclick="gerarRelatorioProducao()" style="background-color: #3498db; margin-top: 10px;">📋 Gerar Relatório Técnico</button>
             </div>
 
             <div>
@@ -442,6 +443,84 @@
         }, 500);
         atualizarParametros();
         loopPrincipal();
+        function gerarRelatorioProducao() {
+    // Calcula o pico máximo de gargalo registrado no gráfico
+    let maxWIP = Math.max(...historicoWIP);
+    
+    // Pega o OEE atual da tela
+    let oeeAtual = document.getElementById("kpiEficiencia").innerText;
+
+    // Cria uma nova janela de visualização para impressão limpa
+    let janelaRelatorio = window.open('', '_blank');
+    
+    janelaRelatorio.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Relatório Operacional - Indústria 4.0</title>
+            <style>
+                body { font-family: Arial, sans-serif; padding: 30px; color: #2c3e50; line-height: 1.6; }
+                h1 { color: #2980b9; border-bottom: 2px solid #2980b9; padding-bottom: 10px; font-size: 24px; }
+                .meta-dados { font-size: 12px; color: #7f8c8d; margin-bottom: 25px; }
+                .kpi-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+                .kpi-table th, .kpi-table td { border: 1px solid #bdc3c7; padding: 12px; text-align: left; }
+                .kpi-table th { background-color: #ecf0f1; font-weight: bold; }
+                .alerta { color: #c0392b; font-weight: bold; }
+                .sucesso { color: #27ae60; font-weight: bold; }
+                .rodape { margin-top: 50px; font-size: 11px; text-align: center; color: #95a5a6; border-top: 1px solid #ecf0f1; padding-top: 10px; }
+                @media print { .btn-imprimir { display: none; } }
+            </style>
+        </head>
+        <body>
+            <h1>📋 Relatório de Desempenho Industrial 4.0</h1>
+            <div class="meta-dados">
+                <strong>Data de Emissão:</strong> ${new Date().toLocaleDateString('pt-BR')} | 
+                <strong>Unidade Automatizada:</strong> UNEB - Laboratório de Processos
+            </div>
+
+            <h3>Resumo dos Indicadores Estatísticos (KPIs):</h3>
+            <table class="kpi-table">
+                <tr>
+                    <th>Indicador Operacional</th>
+                    <th>Valor Registrado</th>
+                    <th>Status Analítico</th>
+                </tr>
+                <tr>
+                    <td>Volume Total Produzido</td>
+                    <td class="sucesso">${produtosConcluidos} unidades</td>
+                    <td>Produção Finalizada e Expedida</td>
+                </tr>
+                <tr>
+                    <td>Total de Falhas em Máquinas</td>
+                    <td class="${totalFalhas > 0 ? 'alerta' : ''}">${totalFalhas} paradas</td>
+                    <td>Eventos de Manutenção Corretiva</td>
+                </tr>
+                <tr>
+                    <td>Eficiência de Disponibilidade (OEE)</td>
+                    <td><strong>${oeeAtual}</strong></td>
+                    <td>Capacidade Operacional Atual</td>
+                </tr>
+                <tr>
+                    <td>Pico de Carga de Trabalho (WIP Máximo)</td>
+                    <td>${maxWIP} produtos</td>
+                    <td>Maior gargalo registrado na esteira</td>
+                </tr>
+            </table>
+
+            <h3>Conclusão e Parecer Técnico:</h3>
+            <p>Os dados coletados pelo sistema estocástico apontam que a linha operou com uma eficiência instantânea de ${oeeAtual}. O acúmulo máximo de ${maxWIP} itens em processo no fluxo logístico indica a necessidade de avaliar o balanceamento de tempos entre as estações de Prensa, Pintura e Triagem para otimização de ciclos futuros.</p>
+
+            <button class="btn-imprimir" onclick="window.print()" style="padding: 10px 20px; font-size: 14px; background:#2980b9; color:white; border:none; border-radius:4px; cursor:pointer; margin-top:20px;">🖨️ Salvar como PDF / Imprimir</button>
+
+            <div class="rodape">
+                Software Autoral de Simulação Educacional - Desenvolvido em HTML5/JavaScript Nativo.
+            </div>
+        </body>
+        </html>
+    `);
+    
+    janelaRelatorio.document.close();
+}
         </script>
 </body>
 </html>
