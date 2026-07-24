@@ -390,37 +390,66 @@
             });
         }
 
-        function desenharGrafico() {
+                function desenharGrafico() {
             ctxGrafico.clearRect(0, 0, canvasGrafico.width, canvasGrafico.height);
             
+            // 📊 1. DESENHO DAS LINHAS GUIA E MARCAÇÃO NUMÉRICA VERTICAL (EIXO Y)
             ctxGrafico.strokeStyle = "#2b2b36";
             ctxGrafico.lineWidth = 1;
-            for(let i=1; i<5; i++) {
-                let y = canvasGrafico.height - (i * 30);
+            ctxGrafico.fillStyle = "#a0a0b0";
+            ctxGrafico.font = "10px sans-serif";
+
+            // Define os rótulos de caixas para cada linha guia do gráfico
+            const rotulosY =; 
+            
+            for(let i = 0; i < rotulosY.length; i++) {
+                // Calcula a posição vertical exata baseada na escala real de 12px por unidade
+                let y = canvasGrafico.height - (rotulosY[i] * 12) - 10;
+                
+                // Desenha a linha horizontal cinza de grade
                 ctxGrafico.beginPath();
-                ctxGrafico.moveTo(0, y);
+                ctxGrafico.moveTo(30, y); // Recua 30px para dar espaço ao texto do rótulo
                 ctxGrafico.lineTo(canvasGrafico.width, y);
                 ctxGrafico.stroke();
+
+                // Desenha o número correspondente na lateral esquerda (Identificação do Eixo Y)
+                ctxGrafico.fillText(rotulosY[i] + " un", 2, y + 3);
             }
 
-            // Desenha a linha histórica do WIP
-            ctxGrafico.strokeStyle = "#4dabf7";
+            // 🎨 2. LOGICA DE ALARME DE COR DA LINHA HISTÓRICA DO WIP
+            // Verifica se o valor atual de WIP (último item da matriz) ultrapassou o limite crítico de 5 caixas
+            let wipAtual = historicoWIP[historicoWIP.length - 1];
+            
+            if (wipAtual >= 5) {
+                ctxGrafico.strokeStyle = "#e63946"; // 🚨 Alarme visual: Linha Fica Vermelha (Gargalo Crítico)
+                
+                // Desenha um aviso textual piscante de Alarme no gráfico
+                ctxGrafico.fillStyle = "#e63946";
+                ctxGrafico.font = "bold 10px sans-serif";
+                ctxGrafico.fillText("⚠️ ALARME: GARGALO CRÍTICO NA ESTEIRA", canvasGrafico.width - 240, 20);
+            } else {
+                ctxGrafico.strokeStyle = "#4dabf7"; // 🟢 Fluxo normal ou balanceado: Linha Azul estável
+            }
+            
+            // 📉 3. DESENHO VETORIAL DA LINHA DO GRÁFICO
             ctxGrafico.lineWidth = 3;
             ctxGrafico.beginPath();
             
-            let espacamento = canvasGrafico.width / (historicoWIP.length - 1);
+            let espacamento = (canvasGrafico.width - 30) / (historicoWIP.length - 1);
             for (let i = 0; i < historicoWIP.length; i++) {
-                let x = i * espacamento;
+                let x = 30 + (i * espacamento); // Inicia em 30px para respeitar a margem dos rótulos
                 let y = canvasGrafico.height - (historicoWIP[i] * 12) - 10;
                 if (i === 0) ctxGrafico.moveTo(x, y);
                 else ctxGrafico.lineTo(x, y);
             }
             ctxGrafico.stroke();
 
+            // Identificação e Título do Gráfico
             ctxGrafico.fillStyle = "#a0a0b0";
-            ctxGrafico.font = "10px sans-serif";
-            ctxGrafico.fillText("Histórico de Carga de Trabalho (WIP ao longo do tempo)", 15, 20);
+            ctxGrafico.font = "bold 11px sans-serif";
+            ctxGrafico.fillText("Histórico de Carga de Trabalho (WIP ao longo do tempo)", 35, 20);
         }
+
 
         function atualizarKPIs() {
             let produtosEmProcesso = produtos.length;
