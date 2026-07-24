@@ -133,6 +133,7 @@
                 <button onclick="adicionarProduto()">Injetar Manual</button>
                 <button id="btnAuto" class="btn-auto" onclick="alternarAuto()">Auto Feed: DESL</button>
                 <button onclick="gerarRelatorioProducao()" style="background-color: #3498db; margin-top: 10px;">📋 Gerar Relatório Técnico</button>
+                <button onclick="alternarManual()" style="background-color: #4b6584; margin-top: 5px;">❓ Manual do Operador</button>
             </div>
 
             <div>
@@ -521,7 +522,48 @@
     
     janelaRelatorio.document.close();
 }
+        function alternarManual() {
+    const modal = document.getElementById("modalManual");
+    if (modal.style.display === "none" || modal.style.display === "") {
+        modal.style.display = "flex";
+    } else {
+        modal.style.display = "none";
+    }
+}
         </script>
+    <!-- 📘 JANELA POP-UP DO MANUAL INTEGRADO -->
+<div id="modalManual" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; justify-content: center; align-items: center; padding: 15px; box-sizing: border-box;">
+    <div style="background: #1e1e24; color: #f5f5f7; width: 100%; max-width: 600px; max-height: 85vh; border-radius: 12px; padding: 20px; box-sizing: border-box; overflow-y: auto; border: 2px solid #22b8cf; text-align: left;">
+        <h2 style="color: #22b8cf; margin-top: 0; border-bottom: 2px solid #3b3b4f; padding-bottom: 8px; font-size: 18px;">📘 MANUAL DE OPERAÇÃO: LINHA 4.0</h2>
+        
+        <h3 style="color: #4dabf7; font-size: 14px; margin-top: 15px;">1. MONITORAMENTO DO DASHBOARD</h3>
+        <p style="font-size: 12px; line-height: 1.5; color: #a0a0b0;">
+            • <strong>Processo (WIP):</strong> Quantidade total de caixas atualmente circulando na esteira ou retidas dentro das máquinas.<br>
+            • <strong>OEE (Disponibilidade):</strong> Eficiência da planta em tempo real. Se uma máquina quebrar, o índice cai automaticamente de 100% para 67% ou 33%.<br>
+            • <strong>Faturamento / Prejuízo:</strong> O faturamento cresce R$ 50,00 a cada peça expedida. Se ocorrer uma falha, o prejuízo acumula em R$ 2,00 por segundo até o reparo ser feito.
+        </p>
+
+        <h3 style="color: #4dabf7; font-size: 14px; margin-top: 15px;">2. COMANDOS DE ALIMENTAÇÃO</h3>
+        <p style="font-size: 12px; line-height: 1.5; color: #a0a0b0;">
+            • <strong>Injetar Manual:</strong> Insere um único bloco azul (matéria-prima) no início da esteira, caso haja espaço seguro.<br>
+            • <strong>Auto Feed:</strong> Liga ou desliga o braço robótico de alimentação contínua, que injeta peças automaticamente a cada 2,2 segundos.
+        </p>
+
+        <h3 style="color: #4dabf7; font-size: 14px; margin-top: 15px;">3. GESTÃO DE FALHAS E GARGALOS</h3>
+        <p style="font-size: 12px; line-height: 1.5; color: #a0a0b0;">
+            • As estações de trabalho (Prensa, Pintura e Triagem) podem quebrar aleatoriamente devido ao estresse de uso, mudando sua cor para <strong>Vermelho</strong>.<br>
+            • Quando uma estação falha, o texto indicador muda para <strong>FALHA</strong> e o botão laranja <strong>Consertar</strong> aparece na tela.<br>
+            • O operador deve clicar rapidamente em <strong>Consertar</strong> para restabelecer o fluxo e interromper o prejuízo financeiro contínuo.
+        </p>
+
+        <h3 style="color: #4dabf7; font-size: 14px; margin-top: 15px;">4. ANÁLISE DO GRÁFICO MES</h3>
+        <p style="font-size: 12px; line-height: 1.5; color: #a0a0b0;">
+            • O gráfico inferior plota a linha contínua de carga de trabalho (WIP) a cada 500 milissegundos. Ondas ascendentes ou picos indicam a formação de gargalos e filas causadas por paradas ou desbalanceamento de tempos de ciclo.
+        </p>
+
+        <button onclick="alternarManual()" style="background-color: #e63946; color: white; padding: 12px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 20px;">❌ Fechar Manual de Instruções</button>
+    </div>
+</div>
 </body>
 </html>
 
